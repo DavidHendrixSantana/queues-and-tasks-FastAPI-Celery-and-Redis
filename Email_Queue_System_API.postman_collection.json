@@ -1,0 +1,516 @@
+{
+	"info": {
+		"_postman_id": "email-queue-system-collection",
+		"name": "Email Queue System API",
+		"description": "Colección completa para probar el sistema de envío de correos con colas usando FastAPI, Celery y Redis.\n\n## Configuración:\n1. Asegúrate de que el servicio esté ejecutándose en http://localhost:8000\n2. Configura las variables de entorno en Postman\n3. Ejecuta las pruebas en orden\n\n## Variables necesarias:\n- base_url: http://localhost:8000\n- test_email: tu_email@gmail.com\n- task_id: se genera automáticamente",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health Check",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Service is healthy\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql(\"healthy\");",
+							"});",
+							"",
+							"pm.test(\"Redis is connected\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.redis_connection).to.eql(\"connected\");",
+							"});",
+							"",
+							"pm.test(\"Celery workers are available\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.celery_workers).to.be.above(0);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Verifica el estado de salud del sistema, incluyendo conexiones a Redis y Celery workers."
+			},
+			"response": []
+		},
+		{
+			"name": "2. API Root Information",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains API information\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('message');",
+							"    pm.expect(jsonData).to.have.property('version');",
+							"    pm.expect(jsonData).to.have.property('endpoints');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Obtiene información general sobre la API y sus endpoints disponibles."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Send Email - Valid Request",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains task_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('task_id');",
+							"    pm.expect(jsonData.task_id).to.be.a('string');",
+							"    ",
+							"    // Save task_id for later use",
+							"    pm.environment.set('task_id', jsonData.task_id);",
+							"});",
+							"",
+							"pm.test(\"Task status is PENDING\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('PENDING');",
+							"});",
+							"",
+							"pm.test(\"Response contains message\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('message');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"{{test_email}}\",\n  \"subject\": \"Prueba desde Postman - Email Queue System\",\n  \"body\": \"¡Hola! Este es un correo de prueba enviado desde Postman usando el sistema de colas de correo.\\n\\nCaracterísticas probadas:\\n- FastAPI como API\\n- Celery como sistema de colas\\n- Redis como broker de mensajes\\n- Docker para containerización\\n\\n¡El sistema funciona perfectamente!\",\n  \"from_email\": \"{{test_email}}\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/send-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"send-email"
+					]
+				},
+				"description": "Envía un correo electrónico válido y obtiene un task_id para seguimiento."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Check Task Status - Immediate",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains task information\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('task_id');",
+							"    pm.expect(jsonData).to.have.property('status');",
+							"});",
+							"",
+							"pm.test(\"Task ID matches sent task\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    var expectedTaskId = pm.environment.get('task_id');",
+							"    pm.expect(jsonData.task_id).to.eql(expectedTaskId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/status/{{task_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"status",
+						"{{task_id}}"
+					]
+				},
+				"description": "Consulta inmediatamente el estado de la tarea enviada."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Send Email - Invalid Email Format",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 422 (Validation Error)\", function () {",
+							"    pm.response.to.have.status(422);",
+							"});",
+							"",
+							"pm.test(\"Response contains validation error\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('detail');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"invalid-email-format\",\n  \"subject\": \"Test Subject\",\n  \"body\": \"Test Body\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/send-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"send-email"
+					]
+				},
+				"description": "Prueba el envío con un formato de email inválido para verificar la validación."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Send Email - Missing Required Fields",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 422 (Validation Error)\", function () {",
+							"    pm.response.to.have.status(422);",
+							"});",
+							"",
+							"pm.test(\"Response contains validation error\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('detail');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"{{test_email}}\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/send-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"send-email"
+					]
+				},
+				"description": "Prueba el envío sin campos requeridos (subject y body) para verificar la validación."
+			},
+			"response": []
+		},
+		{
+			"name": "7. Check Task Status - Non-existent Task",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 (Celery returns info even for non-existent tasks)\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Task status is PENDING for non-existent task\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('PENDING');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/status/non-existent-task-id-12345",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"status",
+						"non-existent-task-id-12345"
+					]
+				},
+				"description": "Consulta el estado de una tarea que no existe."
+			},
+			"response": []
+		},
+		{
+			"name": "8. Send Multiple Emails - Batch Test",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains task_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('task_id');",
+							"    ",
+							"    // Save second task_id",
+							"    pm.environment.set('task_id_2', jsonData.task_id);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"{{test_email}}\",\n  \"subject\": \"Segundo correo - Prueba de colas\",\n  \"body\": \"Este es el segundo correo enviado para probar el sistema de colas.\\n\\nEste correo demuestra que múltiples tareas pueden ser procesadas en paralelo por Celery.\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/send-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"send-email"
+					]
+				},
+				"description": "Envía un segundo correo para probar el procesamiento en paralelo."
+			},
+			"response": []
+		},
+		{
+			"name": "9. Check Second Task Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Task ID matches second task\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    var expectedTaskId = pm.environment.get('task_id_2');",
+							"    pm.expect(jsonData.task_id).to.eql(expectedTaskId);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/status/{{task_id_2}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"status",
+						"{{task_id_2}}"
+					]
+				},
+				"description": "Consulta el estado del segundo correo enviado."
+			},
+			"response": []
+		},
+		{
+			"name": "10. Send Email with HTML Content",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains task_id\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('task_id');",
+							"    pm.environment.set('task_id_html', jsonData.task_id);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"to\": \"{{test_email}}\",\n  \"subject\": \"🎉 Correo con contenido HTML - Email Queue System\",\n  \"body\": \"<h1>¡Hola desde HTML!</h1>\\n<p>Este es un correo con <strong>contenido HTML</strong> enviado desde el sistema de colas.</p>\\n<ul>\\n  <li>✅ FastAPI funcionando</li>\\n  <li>✅ Celery procesando tareas</li>\\n  <li>✅ Redis como broker</li>\\n  <li>✅ Docker containerizado</li>\\n</ul>\\n<p style='color: blue;'>Sistema probado exitosamente desde Postman! 🚀</p>\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/send-email",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"send-email"
+					]
+				},
+				"description": "Envía un correo con contenido HTML para probar diferentes tipos de contenido."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default variables if not set",
+					"if (!pm.environment.get('base_url')) {",
+					"    pm.environment.set('base_url', 'http://localhost:8000');",
+					"}",
+					"",
+					"if (!pm.environment.get('test_email')) {",
+					"    pm.environment.set('test_email', 'dasalvasuper@gmail.com');",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test for response time",
+					"pm.test(\"Response time is less than 5000ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"// Log request details for debugging",
+					"console.log(`${pm.info.requestName}: ${pm.response.status} - ${pm.response.responseTime}ms`);"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "test_email",
+			"value": "dasalvasuper@gmail.com",
+			"type": "string"
+		},
+		{
+			"key": "task_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_id_2",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "task_id_html",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

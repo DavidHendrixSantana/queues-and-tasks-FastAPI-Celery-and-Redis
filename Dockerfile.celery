@@ -1,0 +1,36 @@
+# Dockerfile específico para el worker de Celery
+FROM python:3.11-slim
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar archivos de requisitos
+COPY requirements.txt .
+
+# Instalar dependencias de Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar código de la aplicación
+COPY app/ ./app/
+
+# Copiar archivos de configuración y script de inicialización
+COPY .env.example .env.example
+COPY .env.docker .env.docker
+COPY init-env.sh .
+RUN chmod +x init-env.sh
+
+# Copiar .env si existe, sino preparar para usar .env.docker
+COPY .env* ./
+RUN ./init-env.sh
+
+# Crear usuario no root
+RUN useradd -m -u 1000 celeryuser && chown -R celeryuser:celeryuser /app
+USER celeryuser
+
+# Comando para iniciar el worker
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]

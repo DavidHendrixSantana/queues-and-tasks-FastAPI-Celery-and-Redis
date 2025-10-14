@@ -1,0 +1,54 @@
+services:
+  # API Web Service
+  - type: web
+    name: email-queue-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    port: 8000
+    healthCheckPath: /health
+    envVars:
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis
+          property: connectionString
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USE_TLS
+        value: true
+      - key: IS_DOCKER
+        value: true
+      - key: SMTP_USER
+        sync: false  # Set manually in dashboard
+      - key: SMTP_PASSWORD
+        sync: false  # Set manually in dashboard
+
+  # Celery Worker Service
+  - type: worker
+    name: email-queue-worker
+    env: docker
+    dockerfilePath: ./Dockerfile.celery
+    envVars:
+      - key: REDIS_URL
+        fromDatabase:
+          name: redis
+          property: connectionString
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USE_TLS
+        value: true
+      - key: IS_DOCKER
+        value: true
+      - key: SMTP_USER
+        sync: false  # Set manually in dashboard
+      - key: SMTP_PASSWORD
+        sync: false  # Set manually in dashboard
+
+# Redis Database
+databases:
+  - name: redis
+    databaseName: redis
+    user: redis

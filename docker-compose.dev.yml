@@ -1,0 +1,62 @@
+# Docker Compose para desarrollo con recarga en vivo
+version: '3.8'
+
+services:
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: email_queue_redis_dev
+    ports:
+      - "6380:6379"  # Puerto externo 6380, interno sigue siendo 6379
+    command: redis-server --appendonly yes
+    networks:
+      - email_network
+
+  # API FastAPI con desarrollo
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email_queue_api_dev
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+    depends_on:
+      - redis
+    volumes:
+      - ./app:/app/app
+      - ./start_api.py:/app/start_api.py
+    networks:
+      - email_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Celery Worker para desarrollo
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
+    container_name: email_queue_worker_dev
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+    depends_on:
+      - redis
+    volumes:
+      - ./app:/app/app
+    networks:
+      - email_network
+    command: celery -A app.celery_app worker --loglevel=info
+
+networks:
+  email_network:
+    driver: bridge

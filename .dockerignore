@@ -1,0 +1,72 @@
+# Ignorar archivos innecesarios en el contenedor
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Archivos de entorno (permitir archivos de configuración necesarios)
+.env.local
+.venv
+env/
+venv/
+# Permitir archivos de configuración necesarios:
+# .env (archivo principal, se copiará si existe)
+# .env.docker (archivo de configuración para Docker)
+# .env.example (archivo de ejemplo)
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Base de datos
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+
+# Documentación
+README.md
+docs/
+
+# Tests
+tests/
+
+# Scripts
+start.bat
+start.sh
+*.bat
+*.sh

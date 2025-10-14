@@ -1,0 +1,5 @@
+{
+  "to": "dasalvasuper@gmail.com",
+  "subject": "Prueba SSL Corregida - Email Queue System",
+  "body": "¡Hola! Este correo se envía con la configuración SSL corregida usando puerto 465.\n\n✅ SSL directo en puerto 465\n✅ Sin errores de TLS\n✅ Celery procesando correctamente\n\n¡El sistema funciona perfectamente!"
+}

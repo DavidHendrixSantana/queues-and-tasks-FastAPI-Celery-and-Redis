@@ -1,0 +1,21 @@
+{
+  "build": {
+    "builder": "dockerfile"
+  },
+  "deploy": {
+    "restartPolicyType": "on-failure",
+    "sleepApplication": false
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "REDIS_URL": "${{Redis.REDIS_URL}}",
+        "SMTP_HOST": "smtp.gmail.com",
+        "SMTP_PORT": "587",
+        "SMTP_USE_TLS": "true",
+        "LOG_LEVEL": "INFO",
+        "IS_DOCKER": "true"
+      }
+    }
+  }
+}
